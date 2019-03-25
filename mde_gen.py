@@ -104,12 +104,11 @@ dt_start_strp = datetime.strptime(dt_start, datetime_strp)
 dt_end_strp = datetime.strptime(dt_end, datetime_strp)
 
 #  below is used to format timestamp in MV90 file for the start of interval
-#  Example: if interval starts at 00:15 then convert it to 00:01
-#  if at 00:30, the convert it to 00:16, etc
-if period == 15:
-    new_dt_start_strp = dt_start_strp - timedelta(minutes=14)
-else:
-    new_dt_start_strp = dt_start_strp - timedelta(minutes=29)
+#  Example: for 15 minute interval, if interval starts at 00:15 then convert it to 00:01
+#  if at 00:30 then convert it to 00:16
+#  for 30 minute interval, if interval starts at 00:30 then convert to 00:01
+#  if at 00:00 then convert to 00:31 (previous day)
+new_dt_start_strp = dt_start_strp - timedelta(minutes=period-1)
 
 dt_start_strf = datetime.strftime(new_dt_start_strp, datetime_strf)
 dt_end_strf = (datetime.strftime(dt_end_strp, datetime_strf)).replace("0000", "2400")
