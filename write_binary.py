@@ -5,8 +5,8 @@ from datetime import datetime
 filename = 'MyFile.MDE'
 
 my_hex = struct.pack('<HH', 216,1)
-my_null = struct.pack('<H',32767)
-my_float = struct.pack('<f',1.91)
+my_null = struct.pack('<H', 32767)
+my_float = struct.pack('<f', 1.91)
 
 date_format = "%d-%m-%Y %H:%M:%S"
 
@@ -19,18 +19,17 @@ diff = time2 - time1
 
 #print(str(diff_in_minutes) + ' minutes')
 
-if os.path.exists(filename):
-    os.remove(filename)
-
-def write_binary(filename,value):
-    with open(filename,'ab') as writer:
-        writer.write(value)
-
-def write_string(filename,value):
-    with open(filename,'a') as writer:
-        writer.write(value)  
-
-write_binary('MyFile.MDE', my_hex) 
-write_binary('MyFile.MDE', my_float)
-write_binary('MyFile.MDE', my_null) 
-#write_string('MyFile.MDE','0214000015')
+# if os.path.exists(filename):
+#     os.remove(filename)
+#
+# def write_binary(filename,value):
+#     with open(filename,'ab') as writer:
+#         writer.write(value)
+#
+# def write_string(filename,value):
+#     with open(filename,'a') as writer:
+#         writer.write(value)
+#
+# write_binary('MyFile.MDE', my_hex)
+# write_binary('MyFile.MDE', my_float)
+# write_binary('MyFile.MDE', my_null)

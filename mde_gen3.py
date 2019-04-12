@@ -1,4 +1,5 @@
 from math import ceil
+import datetime
 from datetime import datetime
 from datetime import timedelta
 import struct
@@ -13,7 +14,7 @@ def write_binary(filename, value):
         writer.write(value)
 
 
-def write_string(filename, value):
+def write_string(filename,value):
     with open(filename, 'a') as writer:
         writer.write(value)
 
@@ -57,7 +58,6 @@ def determine_dir(chn, uom):
 def gen_rand(high, low):
     return random.randint(high, low) * 0.001
 
-
 rec_length = 216
 meter_rec = 1
 channel_rec = 10
@@ -72,12 +72,10 @@ parser.add_argument("-n", "--nmi", nargs='+', type=str, required=True, help="NMI
 parser.add_argument("-m", "--meter", nargs='+', type=str, required=True, help="Meter Number")
 parser.add_argument("-s", "--start", nargs='+', required=True, type=dt_regex_validation
                     , help="start period of the reading. in format DD-MM-YYYY For example: 01-03-2019 00:15")
-parser.add_argument("-e", "--end", nargs='+', required=True, type=dt_regex_validation, 
-                        help="end period of the reading. in format DD-MM-YYYY. For example: 01-03-2019 00:15")
+parser.add_argument("-e", "--end", nargs='+', required=True, type=dt_regex_validation
+                    , help="end period of the reading. in format DD-MM-YYYY. For example: 01-03-2019 00:15")
 parser.add_argument("-i", "--interval", nargs='+', required=True, type=int, default=15, choices=[15, 30]
                     , help="number of Interval per hour. Accepts only 15 or 30 minutes.")
-parser.add_argument("-z", "--sendzero", nargs='?', required=False, type=str, default="NO", choices=["YES", "NO"]
-                    , help="Optional: If set to YES then it will send zero valued Interval read")
 
 args = parser.parse_args()
 
@@ -92,19 +90,20 @@ datetime_strf2 = "%Y%m%d%H%M%S"
 field_length = 8
 period = args.interval[0]
 
-reading_per_day = 1440/period  # 1440 minutes in a day
+reading_per_day = 1440/period  # 1440 minutes per day
 
 dt_start_strp = datetime.strptime(dt_start, datetime_strp)
 dt_end_strp = datetime.strptime(dt_end, datetime_strp)
 
-#  below is used to tell MBS the start of interval. Example: if interval starts at 00:15 then convert it to 00:01
-#  if at 00:30, the convert it to 00:16
 new_dt_start_strp = dt_start_strp - timedelta(minutes=14)
 
 dt_start_strf = datetime.strftime(new_dt_start_strp, datetime_strf)
 dt_end_strf = (datetime.strftime(dt_end_strp, datetime_strf)).replace("0000", "2400")
+
+# print(dt_start_strf)
+
 now = datetime.strftime(datetime.now(), datetime_strf)
-file_ts = datetime.strftime(datetime.now(), datetime_strf2)
+now2 = datetime.strftime(datetime.now(), datetime_strf2)
 
 diff = dt_end_strp - dt_start_strp
 
@@ -114,7 +113,7 @@ interval_count = reading_per_day * day_count
 
 reading_row_count = int((interval_count * field_length)/192)  # 192 bytes of reading per record
 
-mde_filename = 'MV90_MDEF_EXPORT_'+str(file_ts)+'_'+str(random.randint(1000, 5000))+'.MDE'
+mde_filename = 'MV90_MDEF_EXPORT_'+str(now2)+'_'+str(random.randint(1000, 5000))+'.MDE'
 
 if os.path.exists(mde_filename):
     os.remove(mde_filename)
@@ -123,7 +122,7 @@ if os.path.exists(mde_filename):
 def write_meter_rec():
     global rec_count
     rec_count += 1
-    put_bint(mde_filename, rec_length)
+    put_bint(mde_filename, 216)
     put_bint(mde_filename, meter_rec)
     put_string(mde_filename, args.meter[0], 20)
     put_string(mde_filename, "Customer01", 20)
@@ -142,7 +141,7 @@ def write_meter_rec():
 def write_channel_rec(chn1, uom1, mmult):
     global rec_count
     rec_count += 1
-    put_bint(mde_filename, rec_length)
+    put_bint(mde_filename, 216)
     put_bint(mde_filename, channel_rec)
     put_string(mde_filename, args.meter[0], 20)
     put_string(mde_filename, args.meter[0], 14)
@@ -184,23 +183,18 @@ def write_channel_and_int_data_rec():
             i = 1
             dt = dt_start_strp
             while i <= int(reading_row_count):
-                put_bint(mde_filename, rec_length)
+                put_bint(mde_filename, 216)
                 put_bint(mde_filename, interval_rec + i)
                 put_string(mde_filename, args.meter[0], 20)
                 j = 1
                 while j <= 192/field_length:
                     if dt > dt_end_strp:
-                        #  If no more data then fill the gap with Integer 32767 = FF7F
-                        #       in Hex (Least Significant Byte Order)
                         put_bint(mde_filename, 32767)
                         put_bint(mde_filename, 32767)
                         put_bint(mde_filename, 32767)
                         put_bint(mde_filename, 32767)
                     else:
-                        if args.sendzero[0] == "NO":
-                            put_bfloat(mde_filename, gen_rand(50, 100))  # 4 bytes of float
-                        else:
-                            put_bfloat(mde_filename, 0)  # 4 bytes of float. If sendzero flag is set to YES
+                        put_bfloat(mde_filename, gen_rand(50, 100))  # 4 bytes of float
                         put_bint(mde_filename, 0)  # 2 bytes of int
                         put_bint(mde_filename, 0)  # 2 bytes of int
                     rec_count += 1
@@ -212,18 +206,18 @@ def write_channel_and_int_data_rec():
 def write_trailer_rec():
     global rec_count
     rec_count += 1
-    put_bint(mde_filename, rec_length)
+    put_bint(mde_filename, 216)
     put_bint(mde_filename, trailer_rec)
     put_string(mde_filename, "", 30)
     put_string(mde_filename, '{:>010d}'.format(rec_count), 10)
     put_string(mde_filename, "", 160)
     put_string(mde_filename, now, 12)
 
-
-# ==========Main Section=====================
+# ==========Main Part=====================
 
 
 write_meter_rec()
 write_channel_and_int_data_rec()
 write_trailer_rec()
 print("File name is %s" % mde_filename)
+
